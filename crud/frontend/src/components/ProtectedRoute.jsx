@@ -4,6 +4,6 @@ import { AppContext } from "../context/AppContext.jsx";
 
 export default function ProtectedRoute({ children }) {
   const { currentUser } = useContext(AppContext);
-  if (!currentUser) return <Navigate to="/login" />;
+  if (!currentUser) return <Navigate to="/register" />;
   return children;
 }
