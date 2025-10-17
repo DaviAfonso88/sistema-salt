@@ -12,7 +12,7 @@ import {
   FaPaperclip,
   FaDownload,
 } from "react-icons/fa";
-import api from "../service/api"; // sua instância axios
+import api from "../service/api";
 
 export default function Communication() {
   const { communications, setCommunications, categories, currentUser, users } =

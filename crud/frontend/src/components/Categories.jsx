@@ -6,7 +6,7 @@ import {
   FaMoneyBillWave,
   FaCommentDots,
 } from "react-icons/fa";
-import api from "../service/api"; // sua instância axios
+import api from "../service/api";
 
 export default function Categories() {
   const { categories, setCategories, currentUser } = useContext(AppContext);

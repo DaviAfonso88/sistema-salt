@@ -7,7 +7,7 @@ import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
+import api from "../service/api";
 
 export default function Management() {
   const { apiUrl, projects, setProjects, currentUser, users } =
@@ -41,7 +41,7 @@ export default function Management() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await axios.get(`${apiUrl}/projects`);
+        const res = await api.get("/projects");
         setProjects(res.data);
       } catch (err) {
         console.error(err);
@@ -65,7 +65,7 @@ export default function Management() {
     };
 
     try {
-      const res = await axios.post(`${apiUrl}/projects`, newProject);
+      const res = await api.post("/projects", newProject);
       setProjects([...projects, res.data]);
       toast.success("Projeto criado!");
       setProjectName("");
@@ -80,7 +80,7 @@ export default function Management() {
       return toast.error("Sem permissão para excluir!");
     }
     try {
-      await axios.delete(`${apiUrl}/projects/${id}`);
+      await api.delete(`/projects/${id}`);
       setProjects(projects.filter((p) => p.id !== id));
       toast.info("Projeto excluído.");
     } catch (err) {
@@ -103,10 +103,7 @@ export default function Management() {
     };
 
     try {
-      const res = await axios.post(
-        `${apiUrl}/projects/${selectedProject}/tasks`,
-        newTask
-      );
+      const res = await api.post(`/projects/${selectedProject}/tasks`, newTask);
       setProjects(
         projects.map((p) =>
           p.id === parseInt(selectedProject)
@@ -129,7 +126,7 @@ export default function Management() {
       return toast.error("Sem permissão para excluir!");
     }
     try {
-      await axios.delete(`${apiUrl}/projects/${projectId}/tasks/${taskId}`);
+      await api.delete(`/projects/${projectId}/tasks/${taskId}`);
       setProjects(
         projects.map((p) =>
           p.id === projectId
@@ -146,7 +143,7 @@ export default function Management() {
 
   const changeTaskStatus = async (projectId, taskId, status) => {
     try {
-      await axios.patch(`${apiUrl}/projects/${projectId}/tasks/${taskId}`, {
+      await api.patch(`/projects/${projectId}/tasks/${taskId}`, {
         status,
       });
       setProjects(
@@ -184,7 +181,7 @@ export default function Management() {
     destProject.tasks.splice(destination.index, 0, movedTask);
 
     try {
-      await axios.patch(`${apiUrl}/tasks/${movedTask.id}`, {
+      await api.patch(`/tasks/${movedTask.id}`, {
         projectId: destProject.id,
         status: movedTask.status,
       });
