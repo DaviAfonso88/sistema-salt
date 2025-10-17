@@ -12,7 +12,7 @@ export const AppProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  const API_URL = "https://seu-backend.vercel.app"; // Ajuste para sua URL
+  const API_URL = "https://sistema-salt.vercel.app/";
 
   // Carregar token e usuário do localStorage
   useEffect(() => {

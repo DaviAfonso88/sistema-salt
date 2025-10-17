@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "sistema-alpha-rouge.vercel.app",
+  baseURL: "https://sistema-salt.vercel.app/",
   headers: {
     "Content-Type": "application/json",
   },
