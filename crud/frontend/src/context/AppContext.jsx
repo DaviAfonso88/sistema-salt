@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from "react";
-import axios from "axios";
+import api from "../service/api"; // usa o mesmo axios configurado
 
 export const AppContext = createContext();
 
@@ -12,79 +12,65 @@ export const AppProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
 
-  const API_URL = "https://sistema-salt.vercel.app/";
-
-  // Carregar token e usuário do localStorage
+  // Carrega usuário salvo
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
     const token = localStorage.getItem("token");
-    const user = JSON.parse(localStorage.getItem("currentUser"));
-    if (token && user) setCurrentUser({ ...user, token });
+    if (user && token) setCurrentUser({ ...user, token });
   }, []);
 
-  // Salvar token e usuário no localStorage
+  // Atualiza localStorage sempre que mudar
   useEffect(() => {
-    if (currentUser?.token) {
+    if (currentUser) {
+      localStorage.setItem("user", JSON.stringify(currentUser));
       localStorage.setItem("token", currentUser.token);
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
     } else {
+      localStorage.removeItem("user");
       localStorage.removeItem("token");
-      localStorage.removeItem("currentUser");
     }
   }, [currentUser]);
 
-  // Config axios com token
-  const axiosInstance = axios.create({
-    baseURL: API_URL,
-    headers: {
-      Authorization: currentUser ? `Bearer ${currentUser.token}` : "",
-    },
-  });
+  // Login
+  const login = async (email, password) => {
+    const res = await api.post("/login", { email, password });
+    const { user, token } = res.data;
+    setCurrentUser({ ...user, token });
+    return { user, token };
+  };
 
-  // Carregar dados do backend
+  // Logout
+  const logout = () => {
+    setCurrentUser(null);
+    localStorage.clear();
+  };
+
+  // Carregar dados
   useEffect(() => {
     if (!currentUser) return;
 
-    const fetchData = async () => {
+    const fetchAll = async () => {
       try {
-        const [catRes, finRes, comRes, projRes, taskRes, userRes] =
-          await Promise.all([
-            axiosInstance.get("/categories"),
-            axiosInstance.get("/financials"),
-            axiosInstance.get("/communications"),
-            axiosInstance.get("/projects"),
-            axiosInstance.get("/tasks"),
-            axiosInstance.get("/users"),
-          ]);
-
-        setCategories(catRes.data);
-        setFinancials(finRes.data);
-        setCommunications(comRes.data);
-        setProjects(projRes.data);
-        setTasks(taskRes.data);
-        setUsers(userRes.data);
+        const [cat, fin, com, proj, task, usr] = await Promise.all([
+          api.get("/categories"),
+          api.get("/financials"),
+          api.get("/communications"),
+          api.get("/projects"),
+          api.get("/tasks"),
+          api.get("/users"),
+        ]);
+        setCategories(cat.data);
+        setFinancials(fin.data);
+        setCommunications(com.data);
+        setProjects(proj.data);
+        setTasks(task.data);
+        setUsers(usr.data);
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
       }
     };
 
-    fetchData();
+    fetchAll();
   }, [currentUser]);
-
-  // Login
-  const login = async (email, password) => {
-    try {
-      const res = await axios.post(`${API_URL}/login`, { email, password });
-      const { user, token } = res.data;
-      setCurrentUser({ ...user, token });
-      return true;
-    } catch (err) {
-      console.error("Erro no login:", err.response?.data?.error || err.message);
-      return false;
-    }
-  };
-
-  // Logout
-  const logout = () => setCurrentUser(null);
 
   return (
     <AppContext.Provider
@@ -102,9 +88,9 @@ export const AppProvider = ({ children }) => {
         users,
         setUsers,
         currentUser,
+        setCurrentUser,
         login,
         logout,
-        axiosInstance,
       }}
     >
       {children}

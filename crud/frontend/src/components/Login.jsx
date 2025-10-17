@@ -1,12 +1,11 @@
 import { useContext, useState } from "react";
-import { AppContext } from "../context/AppContext.jsx";
+import { AppContext } from "../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import api from "../service/api";
 
 export default function Login() {
-  const { setCurrentUser, apiUrl } = useContext(AppContext);
+  const { login } = useContext(AppContext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,23 +18,13 @@ export default function Login() {
     }
 
     setLoading(true);
-
     try {
-      const res = await api.post("/login", { email, password });
-
-      // Supondo que a API retorne { user, token }
-      const { user, token } = res.data;
-
-      // Salva no contexto e localStorage
-      setCurrentUser(user);
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-
+      await login(email, password);
       toast.success("Login realizado com sucesso!");
       setTimeout(() => navigate("/"), 1000);
     } catch (err) {
       console.error(err);
-      toast.error("Email ou senha inválidos");
+      toast.error(err.response?.data?.error || "Email ou senha inválidos");
     } finally {
       setLoading(false);
     }
@@ -70,6 +59,13 @@ export default function Login() {
           disabled={loading}
         >
           {loading ? "Entrando..." : "Entrar"}
+        </button>
+
+        <button
+          onClick={() => navigate("/register")}
+          className="text-sm text-gray-400 hover:underline mt-2"
+        >
+          Não tem conta? Cadastre-se
         </button>
       </div>
     </div>
