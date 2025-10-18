@@ -11,7 +11,14 @@ export default function Dashboard() {
   const { categories, financials, communications, projects } =
     useContext(AppContext);
 
-  const totalIncome = financials.reduce((acc, f) => acc + f.amount, 0);
+  if (!financials || !categories || !communications || !projects) {
+    return <div>Carregando...</div>;
+  }
+
+  const totalIncome = (financials || []).reduce(
+    (acc, f) => acc + (Number(f.amount) || 0),
+    0
+  );
 
   const stats = [
     {
@@ -44,18 +51,15 @@ export default function Dashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {stats.map((item, idx) => (
           <div
             key={idx}
             className="card relative flex flex-col items-center justify-center overflow-hidden"
           >
-            {/* Ícone de fundo */}
             <div className="absolute -top-4 -right-4 opacity-20 text-6xl">
               {item.icon}
             </div>
-
             <div className="flex flex-col items-center z-10">
               <div className="text-gray-400 font-semibold mb-2">
                 {item.label}

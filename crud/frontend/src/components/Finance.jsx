@@ -43,7 +43,7 @@ export default function Finance() {
 
     const formData = new FormData();
     formData.append("description", desc);
-    formData.append("amount", parseFloat(amount));
+    formData.append("amount", parseFloat(amount) || 0);
     formData.append("categoryId", categoryId);
     formData.append("type", type);
     if (file) formData.append("file", file);
@@ -85,12 +85,15 @@ export default function Finance() {
     }
   };
 
+  // ====== CÁLCULOS ======
   const totalIncome = financials
     .filter((f) => f.type === "income")
-    .reduce((acc, cur) => acc + cur.amount, 0);
+    .reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+
   const totalExpense = financials
     .filter((f) => f.type === "expense")
-    .reduce((acc, cur) => acc + cur.amount, 0);
+    .reduce((acc, cur) => acc + Number(cur.amount || 0), 0);
+
   const balance = totalIncome - totalExpense;
 
   return (
@@ -120,7 +123,7 @@ export default function Finance() {
                 item.color === "green" ? "text-green-400" : "text-red-400"
               }`}
             >
-              R$ {item.value.toFixed(2)}
+              R$ {Number(item.value || 0).toFixed(2)}
             </p>
           </div>
         ))}
@@ -207,7 +210,7 @@ export default function Finance() {
                   } flex items-center gap-2`}
                 >
                   {f.type === "income" ? <FaArrowUp /> : <FaArrowDown />} R$
-                  {f.amount.toFixed(2)}
+                  {Number(f.amount || 0).toFixed(2)}
                 </span>
                 <span className="text-gray-400 text-sm">
                   {categories.find((c) => c.id === f.categoryId)?.name ||

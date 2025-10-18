@@ -1,29 +1,48 @@
 import { createContext, useState, useEffect } from "react";
-import api from "../service/api"; // usa o mesmo axios configurado
+import api from "../service/api";
 
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  // Estados iniciais
+  const [currentUser, setCurrentUser] = useState(null);
   const [categories, setCategories] = useState([]);
   const [financials, setFinancials] = useState([]);
   const [communications, setCommunications] = useState([]);
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
-  // Carrega usuário salvo
+  // Recupera usuário e token do localStorage
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
+    const storedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
-    if (user && token) setCurrentUser({ ...user, token });
+
+    if (storedUser && token) {
+      // Valida token no backend
+      api
+        .get("/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => {
+          setCurrentUser({ ...res.data, token });
+        })
+        .catch(() => {
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+          setCurrentUser(null);
+        })
+        .finally(() => setLoadingUser(false));
+    } else {
+      setLoadingUser(false);
+    }
   }, []);
 
-  // Atualiza localStorage sempre que mudar
+  // Atualiza localStorage sempre que mudar currentUser
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem("user", JSON.stringify(currentUser));
-      localStorage.setItem("token", currentUser.token);
+      const { token, ...userData } = currentUser;
+      localStorage.setItem("user", JSON.stringify(userData));
+      localStorage.setItem("token", token);
     } else {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
@@ -44,7 +63,7 @@ export const AppProvider = ({ children }) => {
     localStorage.clear();
   };
 
-  // Carregar dados
+  // Carrega dados do backend só depois que o usuário estiver logado
   useEffect(() => {
     if (!currentUser) return;
 
@@ -58,12 +77,13 @@ export const AppProvider = ({ children }) => {
           api.get("/tasks"),
           api.get("/users"),
         ]);
-        setCategories(cat.data);
-        setFinancials(fin.data);
-        setCommunications(com.data);
-        setProjects(proj.data);
-        setTasks(task.data);
-        setUsers(usr.data);
+
+        setCategories(cat.data || []);
+        setFinancials(fin.data || []);
+        setCommunications(com.data || []);
+        setProjects(proj.data || []);
+        setTasks(task.data || []);
+        setUsers(usr.data || []);
       } catch (err) {
         console.error("Erro ao carregar dados:", err);
       }
@@ -75,6 +95,10 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider
       value={{
+        currentUser,
+        login,
+        logout,
+        loadingUser,
         categories,
         setCategories,
         financials,
@@ -87,10 +111,6 @@ export const AppProvider = ({ children }) => {
         setTasks,
         users,
         setUsers,
-        currentUser,
-        setCurrentUser,
-        login,
-        logout,
       }}
     >
       {children}

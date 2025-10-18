@@ -42,7 +42,7 @@ export default function Register() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nome"
-          className="mb-2"
+          className="p-3 rounded-lg bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           disabled={loading}
         />
         <input
@@ -50,7 +50,7 @@ export default function Register() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
-          className="mb-2"
+          className="p-3 rounded-lg bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           disabled={loading}
         />
         <input
@@ -58,7 +58,7 @@ export default function Register() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Senha"
-          className="mb-4"
+          className="p-3 rounded-lg bg-white/10 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
           disabled={loading}
         />
 

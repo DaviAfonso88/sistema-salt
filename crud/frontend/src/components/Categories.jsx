@@ -11,18 +11,23 @@ import api from "../service/api";
 export default function Categories() {
   const { categories, setCategories, currentUser } = useContext(AppContext);
   const [name, setName] = useState("");
-  const [location, setLocation] = useState("finance"); // default Financeiro
+  const [location, setLocation] = useState("finance");
   const [loading, setLoading] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   // ====== FETCH CATEGORIES ======
   useEffect(() => {
+    if (!currentUser?.token) return;
+
     const fetchCategories = async () => {
+      setLoadingCategories(true);
       try {
         const res = await api.get("/categories", {
           headers: { Authorization: `Bearer ${currentUser.token}` },
         });
+
         setCategories(
-          res.data.map((c) => ({
+          (res.data || []).map((c) => ({
             ...c,
             userId: c.author_id || currentUser.id,
             color: "#1B1C22",
@@ -31,21 +36,26 @@ export default function Categories() {
         );
       } catch (err) {
         console.error("Erro ao carregar categorias:", err);
+      } finally {
+        setLoadingCategories(false);
       }
     };
+
     fetchCategories();
   }, [currentUser, setCategories]);
 
   // ====== ADD CATEGORY ======
   const addCategory = async () => {
-    if (!name || !location) return;
+    if (!name || !location || !currentUser?.token) return;
     setLoading(true);
+
     try {
       const res = await api.post(
         "/categories",
-        { name },
+        { name, location },
         { headers: { Authorization: `Bearer ${currentUser.token}` } }
       );
+
       const newCat = {
         id: res.data.id,
         name: res.data.name,
@@ -54,7 +64,8 @@ export default function Categories() {
         color: location === "finance" ? "#1B1C22" : "#1B1C22",
         textColor: location === "finance" ? "#E6F0FF" : "#F5E6FF",
       };
-      setCategories([...categories, newCat]);
+
+      setCategories([...(categories || []), newCat]);
       setName("");
       setLocation("finance");
     } catch (err) {
@@ -66,19 +77,23 @@ export default function Categories() {
 
   // ====== DELETE CATEGORY ======
   const deleteCategory = async (id, userId) => {
+    if (!currentUser?.token) return;
     if (currentUser.role !== "admin" && currentUser.id !== userId) return;
+
     try {
       await api.delete(`/categories/${id}`, {
         headers: { Authorization: `Bearer ${currentUser.token}` },
       });
-      setCategories(categories.filter((c) => c.id !== id));
+      setCategories((categories || []).filter((c) => c.id !== id));
     } catch (err) {
       console.error("Erro ao deletar categoria:", err);
     }
   };
 
-  const financeCategories = categories.filter((c) => c.location === "finance");
-  const communicationCategories = categories.filter(
+  const financeCategories = (categories || []).filter(
+    (c) => c.location === "finance"
+  );
+  const communicationCategories = (categories || []).filter(
     (c) => c.location === "communication"
   );
 
@@ -102,6 +117,7 @@ export default function Categories() {
           </span>
         </div>
       </div>
+
       {(currentUser.role === "admin" || currentUser.id === c.userId) && (
         <button
           onClick={() => deleteCategory(c.id, c.userId)}
@@ -113,6 +129,10 @@ export default function Categories() {
       )}
     </div>
   );
+
+  // ====== RENDER ======
+  if (!currentUser) return <div>Carregando usuário...</div>;
+  if (loadingCategories) return <div>Carregando categorias...</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-10">

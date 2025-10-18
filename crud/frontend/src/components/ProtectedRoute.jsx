@@ -3,7 +3,9 @@ import { Navigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext.jsx";
 
 export default function ProtectedRoute({ children }) {
-  const { currentUser } = useContext(AppContext);
-  if (!currentUser) return <Navigate to="/register" />;
-  return children;
+  const { currentUser, loadingUser } = useContext(AppContext);
+
+  if (loadingUser) return <div>Carregando...</div>;
+
+  return currentUser ? children : <Navigate to="/login" />;
 }

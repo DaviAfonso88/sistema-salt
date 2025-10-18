@@ -42,7 +42,11 @@ export default function Management() {
     const fetchProjects = async () => {
       try {
         const res = await api.get("/projects");
-        setProjects(res.data);
+        const data = res.data.map((p) => ({
+          ...p,
+          tasks: p.tasks || [],
+        }));
+        setProjects(data);
       } catch (err) {
         console.error(err);
         toast.error("Erro ao carregar projetos.");
@@ -66,7 +70,7 @@ export default function Management() {
 
     try {
       const res = await api.post("/projects", newProject);
-      setProjects([...projects, res.data]);
+      setProjects([...projects, { ...res.data, tasks: [] }]);
       toast.success("Projeto criado!");
       setProjectName("");
     } catch (err) {
@@ -107,7 +111,7 @@ export default function Management() {
       setProjects(
         projects.map((p) =>
           p.id === parseInt(selectedProject)
-            ? { ...p, tasks: [...p.tasks, res.data] }
+            ? { ...p, tasks: [...(p.tasks || []), res.data] }
             : p
         )
       );
@@ -130,7 +134,7 @@ export default function Management() {
       setProjects(
         projects.map((p) =>
           p.id === projectId
-            ? { ...p, tasks: p.tasks.filter((t) => t.id !== taskId) }
+            ? { ...p, tasks: (p.tasks || []).filter((t) => t.id !== taskId) }
             : p
         )
       );
@@ -143,15 +147,13 @@ export default function Management() {
 
   const changeTaskStatus = async (projectId, taskId, status) => {
     try {
-      await api.patch(`/projects/${projectId}/tasks/${taskId}`, {
-        status,
-      });
+      await api.patch(`/projects/${projectId}/tasks/${taskId}`, { status });
       setProjects(
         projects.map((p) =>
           p.id === projectId
             ? {
                 ...p,
-                tasks: p.tasks.map((t) =>
+                tasks: (p.tasks || []).map((t) =>
                   t.id === taskId ? { ...t, status } : t
                 ),
               }
@@ -177,8 +179,16 @@ export default function Management() {
       (p) => p.id === parseInt(destination.droppableId)
     );
 
-    const [movedTask] = sourceProject.tasks.splice(source.index, 1);
-    destProject.tasks.splice(destination.index, 0, movedTask);
+    if (!sourceProject || !destProject) return;
+
+    const sourceTasks = [...(sourceProject.tasks || [])];
+    const destTasks = [...(destProject.tasks || [])];
+
+    const [movedTask] = sourceTasks.splice(source.index, 1);
+    destTasks.splice(destination.index, 0, movedTask);
+
+    sourceProject.tasks = sourceTasks;
+    destProject.tasks = destTasks;
 
     try {
       await api.patch(`/tasks/${movedTask.id}`, {
@@ -194,9 +204,13 @@ export default function Management() {
   };
 
   // --- Dashboard geral ---
-  const totalTasks = projects.reduce((acc, p) => acc + p.tasks.length, 0);
+  const totalTasks = projects.reduce(
+    (acc, p) => acc + (p.tasks?.length || 0),
+    0
+  );
   const completedTasks = projects.reduce(
-    (acc, p) => acc + p.tasks.filter((t) => t.status === "Concluído").length,
+    (acc, p) =>
+      acc + (p.tasks?.filter((t) => t.status === "Concluído").length || 0),
     0
   );
   const progress = totalTasks
@@ -308,10 +322,9 @@ export default function Management() {
             </div>
           ) : (
             projects.map((p) => {
-              const totalTasks = p.tasks.length;
-              const completedTasks = p.tasks.filter(
-                (t) => t.status === "Concluído"
-              ).length;
+              const totalTasks = p.tasks?.length || 0;
+              const completedTasks =
+                p.tasks?.filter((t) => t.status === "Concluído").length || 0;
               const progress =
                 totalTasks === 0
                   ? 0
@@ -358,7 +371,7 @@ export default function Management() {
 
                       {/* Tasks */}
                       <div className="space-y-3 flex-1">
-                        {p.tasks.map((t, index) => {
+                        {(p.tasks || []).map((t, index) => {
                           const user = users.find((u) => u.id === t.userId);
                           return (
                             <Draggable
