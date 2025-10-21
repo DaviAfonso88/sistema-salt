@@ -10,8 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import api from "../service/api";
 
 export default function Management() {
-  const { apiUrl, projects, setProjects, currentUser, users } =
-    useContext(AppContext);
+  const { projects, setProjects, currentUser, users } = useContext(AppContext);
 
   const [projectName, setProjectName] = useState("");
   const [taskName, setTaskName] = useState("");
@@ -19,7 +18,7 @@ export default function Management() {
   const [priority, setPriority] = useState("Média");
   const [category, setCategory] = useState("Gestão");
 
-  const statusOptions = ["A Fazer", "Em Andamento", "Concluído"];
+  const statusOptions = ["a fazer", "em andamento", "concluido"];
   const statusColors = {
     "A Fazer": "bg-gray-700 text-white",
     "Em Andamento": "bg-yellow-500 text-black",
@@ -53,7 +52,7 @@ export default function Management() {
       }
     };
     fetchProjects();
-  }, [apiUrl, setProjects]);
+  }, [setProjects]);
 
   // --- Funções ---
   const addProject = async () => {
@@ -98,16 +97,18 @@ export default function Management() {
       return toast.warning("Selecione projeto e digite uma tarefa!");
 
     const newTask = {
-      name: taskName,
-      userId: currentUser.id,
-      status: "A Fazer",
-      priority,
-      category,
+      title: taskName,
+      project_id: parseInt(selectedProject),
+      status: "a fazer",
+      priority, // ✅ prioridade selecionada
+      category, // ✅ categoria selecionada
+      userId: currentUser.id, // ✅ responsável atual
       createdAt: new Date().toISOString(),
     };
 
     try {
-      const res = await api.post(`/projects/${selectedProject}/tasks`, newTask);
+      const res = await api.post("/tasks", newTask);
+
       setProjects(
         projects.map((p) =>
           p.id === parseInt(selectedProject)
@@ -115,6 +116,7 @@ export default function Management() {
             : p
         )
       );
+
       toast.success("Tarefa adicionada!");
       setTaskName("");
       setPriority("Média");
@@ -130,7 +132,7 @@ export default function Management() {
       return toast.error("Sem permissão para excluir!");
     }
     try {
-      await api.delete(`/projects/${projectId}/tasks/${taskId}`);
+      await api.delete(`/tasks/${taskId}`);
       setProjects(
         projects.map((p) =>
           p.id === projectId
@@ -147,7 +149,7 @@ export default function Management() {
 
   const changeTaskStatus = async (projectId, taskId, status) => {
     try {
-      await api.patch(`/projects/${projectId}/tasks/${taskId}`, { status });
+      await api.put(`/tasks/${taskId}`, { status });
       setProjects(
         projects.map((p) =>
           p.id === projectId
@@ -191,8 +193,8 @@ export default function Management() {
     destProject.tasks = destTasks;
 
     try {
-      await api.patch(`/tasks/${movedTask.id}`, {
-        projectId: destProject.id,
+      await api.put(`/tasks/${movedTask.id}`, {
+        project_id: destProject.id,
         status: movedTask.status,
       });
       setProjects(newProjects);
@@ -389,9 +391,9 @@ export default function Management() {
                                       Criado:{" "}
                                       {dayjs(t.createdAt).format("DD/MM/YYYY")}
                                       <br />
-                                      Prioridade: {t.priority}
+                                      Prioridade: {t.priority || "Média"}
                                       <br />
-                                      Equipe: {t.category}
+                                      Equipe: {t.category || "Gestão"}
                                     </div>
                                   }
                                   placement="top"
@@ -443,14 +445,16 @@ export default function Management() {
                                       </select>
                                       <span
                                         className={`px-2 py-1 rounded ${
-                                          priorityColors[t.priority]
+                                          priorityColors[t.priority || "Média"]
                                         }`}
                                       >
-                                        {t.priority}
+                                        {t.priority || "Média"}
                                       </span>
                                     </div>
                                     <div className="flex justify-between items-center text-xs text-gray-400">
-                                      <span>Equipe: {t.category}</span>
+                                      <span>
+                                        Equipe: {t.category || "Gestão"}
+                                      </span>
                                       <span>
                                         Criado:{" "}
                                         {dayjs(t.createdAt).format("DD/MM")}

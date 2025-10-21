@@ -151,13 +151,11 @@ export default function Finance() {
             onChange={(e) => setCategoryId(e.target.value)}
           >
             <option value="">Categoria</option>
-            {categories
-              .filter((c) => c.location === "finance")
-              .map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
           </select>
           <select value={type} onChange={(e) => setType(e.target.value)}>
             <option value="income">Receita</option>
@@ -213,19 +211,12 @@ export default function Finance() {
                   {Number(f.amount || 0).toFixed(2)}
                 </span>
                 <span className="text-gray-400 text-sm">
+                  Categoria:{" "}
                   {categories.find((c) => c.id === f.categoryId)?.name ||
                     "Sem categoria"}
                 </span>
-                {f.file && (
-                  <a
-                    href={f.file.url}
-                    download={f.file.name}
-                    className="text-purple-400 text-sm underline mt-1 truncate"
-                  >
-                    📎 {f.file.name}
-                  </a>
-                )}
               </div>
+
               {(currentUser.role === "admin" ||
                 currentUser.id === f.userId) && (
                 <button

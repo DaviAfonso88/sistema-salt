@@ -1,17 +1,11 @@
 import { useContext, useEffect, useState } from "react";
 import { AppContext } from "../context/AppContext.jsx";
-import {
-  FaTrash,
-  FaPlus,
-  FaMoneyBillWave,
-  FaCommentDots,
-} from "react-icons/fa";
+import { FaTrash, FaPlus } from "react-icons/fa";
 import api from "../service/api";
 
 export default function Categories() {
   const { categories, setCategories, currentUser } = useContext(AppContext);
   const [name, setName] = useState("");
-  const [location, setLocation] = useState("finance");
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -46,28 +40,26 @@ export default function Categories() {
 
   // ====== ADD CATEGORY ======
   const addCategory = async () => {
-    if (!name || !location || !currentUser?.token) return;
+    if (!name || !currentUser?.token) return;
     setLoading(true);
 
     try {
       const res = await api.post(
         "/categories",
-        { name, location },
+        { name },
         { headers: { Authorization: `Bearer ${currentUser.token}` } }
       );
 
       const newCat = {
         id: res.data.id,
         name: res.data.name,
-        location,
         userId: currentUser.id,
-        color: location === "finance" ? "#1B1C22" : "#1B1C22",
-        textColor: location === "finance" ? "#E6F0FF" : "#F5E6FF",
+        color: "#1B1C22",
+        textColor: "#E6F0FF",
       };
 
       setCategories([...(categories || []), newCat]);
       setName("");
-      setLocation("finance");
     } catch (err) {
       console.error("Erro ao adicionar categoria:", err);
     } finally {
@@ -90,50 +82,6 @@ export default function Categories() {
     }
   };
 
-  const financeCategories = (categories || []).filter(
-    (c) => c.location === "finance"
-  );
-  const communicationCategories = (categories || []).filter(
-    (c) => c.location === "communication"
-  );
-
-  const renderCategoryCard = (c, icon) => (
-    <div
-      key={c.id}
-      className="relative p-4 rounded-2xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-between card"
-      style={{ background: c.color }}
-    >
-      <div className="flex items-center gap-3">
-        {icon}
-        <div className="flex flex-col">
-          <span
-            className="font-semibold text-lg"
-            style={{ color: c.textColor }}
-          >
-            {c.name}
-          </span>
-          <span className="text-sm italic" style={{ color: c.textColor }}>
-            {c.location === "finance" ? "Financeiro" : "Comunicação"}
-          </span>
-        </div>
-      </div>
-
-      {(currentUser.role === "admin" || currentUser.id === c.userId) && (
-        <button
-          onClick={() => deleteCategory(c.id, c.userId)}
-          className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition text-xl p-2 rounded-full hover:bg-red-100"
-          title="Excluir Categoria"
-        >
-          <FaTrash />
-        </button>
-      )}
-    </div>
-  );
-
-  // ====== RENDER ======
-  if (!currentUser) return <div>Carregando usuário...</div>;
-  if (loadingCategories) return <div>Carregando categorias...</div>;
-
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-10">
       <h1 className="text-4xl font-bold text-white text-center mb-6">
@@ -149,15 +97,6 @@ export default function Categories() {
           className="bg-[#1B1C22] border border-[#2C2C36] text-white placeholder-gray-400 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition w-full px-4 py-3"
         />
 
-        <select
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          className="bg-[#1B1C22] border border-[#2C2C36] text-white rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition w-full px-4 py-3"
-        >
-          <option value="finance">Financeiro</option>
-          <option value="communication">Comunicação</option>
-        </select>
-
         <button
           onClick={addCategory}
           className="btn-primary flex items-center gap-2"
@@ -167,47 +106,38 @@ export default function Categories() {
         </button>
       </div>
 
-      {/* Seção Financeiro */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-3 text-purple-500">
-          <FaMoneyBillWave /> Financeiro
-        </h2>
-        {financeCategories.length === 0 ? (
-          <p className="text-gray-400">
-            Nenhuma categoria financeira adicionada.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {financeCategories.map((c) =>
-              renderCategoryCard(
-                c,
-                <FaMoneyBillWave className="text-purple-500 text-2xl" />
-              )
-            )}
-          </div>
-        )}
-      </div>
+      {/* Lista de Categorias */}
+      {categories?.length === 0 ? (
+        <p className="text-gray-400 mt-4">Nenhuma categoria adicionada.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {categories.map((c) => (
+            <div
+              key={c.id}
+              className="relative p-4 rounded-2xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-between card"
+              style={{ background: c.color }}
+            >
+              <span
+                className="font-semibold text-lg"
+                style={{ color: c.textColor }}
+              >
+                {c.name}
+              </span>
 
-      {/* Seção Comunicação */}
-      <div>
-        <h2 className="text-2xl font-bold mb-4 flex items-center gap-3 text-pink-500">
-          <FaCommentDots /> Comunicação
-        </h2>
-        {communicationCategories.length === 0 ? (
-          <p className="text-gray-400">
-            Nenhuma categoria de comunicação adicionada.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {communicationCategories.map((c) =>
-              renderCategoryCard(
-                c,
-                <FaCommentDots className="text-pink-500 text-2xl" />
-              )
-            )}
-          </div>
-        )}
-      </div>
+              {(currentUser.role === "admin" ||
+                currentUser.id === c.userId) && (
+                <button
+                  onClick={() => deleteCategory(c.id, c.userId)}
+                  className="text-red-500 hover:text-red-700 transition text-xl p-2 rounded-full hover:bg-red-100"
+                  title="Excluir Categoria"
+                >
+                  <FaTrash />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

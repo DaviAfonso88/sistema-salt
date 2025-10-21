@@ -43,8 +43,7 @@ async function createTables() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS categories (
         id SERIAL PRIMARY KEY,
-        name TEXT UNIQUE,
-        location TEXT CHECK (location IN ('finance','communication')) DEFAULT 'finance'
+        name TEXT UNIQUE
       )
     `);
 
@@ -187,84 +186,36 @@ app.get("/users", auth, async (req, res) => {
 
 // ================== ROTAS CATEGORIES ==================
 app.get("/categories", auth, async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM categories ORDER BY id");
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao buscar categorias" });
-  }
+  const result = await pool.query("SELECT * FROM categories ORDER BY id");
+  res.json(result.rows);
 });
 
 app.post("/categories", auth, async (req, res) => {
+  const { name } = req.body;
   try {
-    const { name, location } = req.body;
-
-    if (!name) return res.status(400).json({ error: "O nome é obrigatório" });
-    if (location && !["finance", "communication"].includes(location))
-      return res.status(400).json({ error: "Location inválido" });
-
     const result = await pool.query(
-      "INSERT INTO categories (name, location) VALUES ($1, $2) RETURNING *",
-      [name, location || "finance"]
+      "INSERT INTO categories (name) VALUES ($1) RETURNING *",
+      [name]
     );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: "Categoria já existe ou erro ao criar" });
+    res.json(result.rows[0]);
+  } catch {
+    res.status(400).json({ error: "Categoria já existe" });
   }
 });
 
 app.put("/categories/:id", auth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, location } = req.body;
-
-    if (!name && !location)
-      return res
-        .status(400)
-        .json({ error: "Informe name ou location para atualizar" });
-    if (location && !["finance", "communication"].includes(location))
-      return res.status(400).json({ error: "Location inválido" });
-
-    // Pega categoria existente
-    const { rows: existing } = await pool.query(
-      "SELECT * FROM categories WHERE id=$1",
-      [id]
-    );
-    if (!existing.length)
-      return res.status(404).json({ error: "Categoria não encontrada" });
-
-    const updatedName = name || existing[0].name;
-    const updatedLocation = location || existing[0].location;
-
-    const result = await pool.query(
-      "UPDATE categories SET name=$1, location=$2 WHERE id=$3 RETURNING *",
-      [updatedName, updatedLocation, id]
-    );
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao atualizar categoria" });
-  }
+  const { id } = req.params;
+  const { name } = req.body;
+  const result = await pool.query(
+    "UPDATE categories SET name=$1 WHERE id=$2 RETURNING *",
+    [name, id]
+  );
+  res.json(result.rows[0]);
 });
 
 app.delete("/categories/:id", auth, async (req, res) => {
-  try {
-    const { rowCount } = await pool.query(
-      "DELETE FROM categories WHERE id=$1",
-      [req.params.id]
-    );
-    if (!rowCount)
-      return res.status(404).json({ error: "Categoria não encontrada" });
-
-    res.json({ message: "Categoria deletada com sucesso" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao deletar categoria" });
-  }
+  await pool.query("DELETE FROM categories WHERE id=$1", [req.params.id]);
+  res.sendStatus(204);
 });
 
 // ================== ROTAS PRODUCTS ==================
@@ -411,31 +362,70 @@ app.delete("/projects/:id", auth, async (req, res) => {
 });
 
 // ================== ROTAS TASKS ==================
+// ✅ Listar tarefas (com os nomes esperados no frontend)
 app.get("/tasks", auth, async (req, res) => {
-  const result = await pool.query(
-    "SELECT * FROM tasks ORDER BY created_at DESC"
-  );
+  const result = await pool.query(`
+    SELECT 
+      id,
+      title,
+      title AS name,
+      project_id,
+      author_id AS "userId",
+      status,
+      priority,
+      category,
+      created_at AS "createdAt"
+    FROM tasks
+    ORDER BY created_at DESC
+  `);
   res.json(result.rows);
 });
 
+// ✅ Criar tarefa com prioridade, categoria e responsável
 app.post("/tasks", auth, async (req, res) => {
-  const { title, project_id, status } = req.body;
+  const { title, project_id, status, priority, category } = req.body;
+
   const result = await pool.query(
-    "INSERT INTO tasks (title, project_id, author_id, status) VALUES ($1,$2,$3,$4) RETURNING *",
-    [title, project_id, req.user.id, status || "a fazer"]
+    `INSERT INTO tasks (title, project_id, author_id, status, priority, category)
+     VALUES ($1,$2,$3,$4,$5,$6)
+     RETURNING 
+       id, title, title AS name, project_id, author_id AS "userId",
+       status, priority, category, created_at AS "createdAt"`,
+    [
+      title,
+      project_id,
+      req.user.id,
+      status || "a fazer",
+      priority || "Média",
+      category || "Gestão",
+    ]
   );
+
   res.json(result.rows[0]);
 });
 
+// ✅ Atualizar tarefa (permitindo editar prioridade e categoria)
 app.put("/tasks/:id", auth, isAuthorOrAdmin("tasks"), async (req, res) => {
-  const { title, status } = req.body;
+  const { title, status, priority, category } = req.body;
+
   const result = await pool.query(
-    "UPDATE tasks SET title=$1,status=$2 WHERE id=$3 RETURNING *",
-    [title, status, req.params.id]
+    `UPDATE tasks 
+     SET 
+       title = COALESCE($1, title),
+       status = COALESCE($2, status),
+       priority = COALESCE($3, priority),
+       category = COALESCE($4, category)
+     WHERE id=$5
+     RETURNING 
+       id, title, title AS name, project_id, author_id AS "userId",
+       status, priority, category, created_at AS "createdAt"`,
+    [title, status, priority, category, req.params.id]
   );
+
   res.json(result.rows[0]);
 });
 
+// ✅ Excluir tarefa
 app.delete("/tasks/:id", auth, isAuthorOrAdmin("tasks"), async (req, res) => {
   await pool.query("DELETE FROM tasks WHERE id=$1", [req.params.id]);
   res.sendStatus(204);
