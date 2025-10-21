@@ -332,10 +332,27 @@ app.delete(
 
 // ================== ROTAS PROJECTS ==================
 app.get("/projects", auth, async (req, res) => {
-  const result = await pool.query(
-    "SELECT * FROM projects ORDER BY created_at DESC"
-  );
-  res.json(result.rows);
+  try {
+    // Busca todos os projetos
+    const projectsResult = await pool.query(
+      "SELECT * FROM projects ORDER BY id ASC"
+    );
+    const projects = projectsResult.rows;
+
+    // Para cada projeto, busca suas tarefas
+    for (let project of projects) {
+      const tasksResult = await pool.query(
+        "SELECT * FROM tasks WHERE project_id = $1 ORDER BY created_at DESC",
+        [project.id]
+      );
+      project.tasks = tasksResult.rows;
+    }
+
+    res.json(projects);
+  } catch (error) {
+    console.error("Erro ao carregar projetos:", error);
+    res.status(500).json({ error: "Erro ao carregar projetos" });
+  }
 });
 
 app.post("/projects", auth, async (req, res) => {
